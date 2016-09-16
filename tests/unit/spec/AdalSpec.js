@@ -752,8 +752,10 @@ describe('Adal', function () {
     });
 
     it('tests handleWindowCallback function for LOGIN_REQUEST', function () {
-        window.location = {};
-        window.location.hash = '#/id_token=' + IDTOKEN_MOCK;
+        window.location = {
+            hash: '#/id_token=' + IDTOKEN_MOCK,
+            href: 'href'
+        };
         var _getRequestInfo = adal.getRequestInfo;
         adal.getRequestInfo = function () {
             return {
@@ -955,6 +957,36 @@ describe('Adal', function () {
         };
         expect(adal._guid()).toBe('00010203-0405-4607-8809-0a0b0c0d0e0f');
         window.crypto = null;
+    });
+
+    it('navigates to LOGIN_REQUEST url after handling callback', function () {
+        adal.popUp = false;
+        var loginRequestUrl = 'https://localhost:3000/login';
+        var createFakeLocation = function () {
+            return {
+                hash: '#id_token=idtoken234',
+                href: 'href',
+                replace: function (val) {
+                }
+            };
+        };
+
+        storageFake.setItem(adal.CONSTANTS.STORAGE.LOGIN_REQUEST, loginRequestUrl);
+
+        window.location = createFakeLocation();
+        adal.handleWindowCallback();
+        expect(window.location).toBe(loginRequestUrl);
+
+        window.location = createFakeLocation();
+        adal.config.navigateToLoginRequestUrl = true;
+        adal.handleWindowCallback();
+        expect(window.location).toBe(loginRequestUrl);
+
+        window.location = createFakeLocation();
+        adal.config.navigateToLoginRequestUrl = false;
+        adal.handleWindowCallback();
+        expect(window.location).not.toBe(loginRequestUrl);
+
     });
     // TODO angular intercepptor
     // TODO angular authenticationService
