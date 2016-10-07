@@ -239,7 +239,6 @@ describe('Adal', function () {
         adal._user = { profile: { 'upn': 'test@testuser.com' }, userName: 'test@domain.com' };
         adal.acquireToken(RESOURCE1, callback);
         expect(adal.callback).toBe(null);
-        expect(storageFake.getItem(adal.CONSTANTS.STORAGE.LOGIN_REQUEST)).toBe('');
         expect(adal._renewStates.length).toBe(1);
         // Wait for initial timeout load
         console.log('Waiting for initial timeout');
@@ -255,7 +254,7 @@ describe('Adal', function () {
     });
 
     //Necessary for integration with Angular when multiple http calls are queued.
-    it('allows multiple callers to be notified when the token is renewed', function () {
+    it('allows multiple callers to be notified when the token is renewed. Also checks if all registered acquireToken callbacks are called in the case when one of the callbacks throws an error', function () {
         adal.config.redirectUri = 'contoso_site';
         adal.config.clientId = 'client';
         adal.config.expireOffsetSeconds = SECONDS_TO_EXPIRE + 100;
@@ -266,6 +265,7 @@ describe('Adal', function () {
         var callback = function (valErr, valToken) {
             err = valErr;
             token = valToken;
+            throw new Error("Error occurred in callback function");
         };
         var callback2 = function (valErr, valToken) {
             err2 = valErr;
@@ -277,7 +277,6 @@ describe('Adal', function () {
         adal.acquireToken(RESOURCE1, callback);
         //Simulate second acquire i.e. second service call from Angular.
         adal.acquireToken(RESOURCE1, callback2);
-        expect(storageFake.getItem(adal.CONSTANTS.STORAGE.LOGIN_REQUEST)).toBe('');
         expect(adal._renewStates.length).toBe(1);
         // Wait for initial timeout load
         console.log('Waiting for initial timeout');
@@ -710,7 +709,6 @@ describe('Adal', function () {
         expect(storageFake.getItem(adal.CONSTANTS.STORAGE.NONCE_IDTOKEN)).toBe('33333333-3333-4333-b333-333333333333');
         expect(adal.config.state).toBe('33333333-3333-4333-b333-333333333333' + '|' + 'client');
         expect(adal._renewStates.length).toBe(1);
-        expect(storageFake.getItem(adal.CONSTANTS.STORAGE.LOGIN_REQUEST)).toBe('');
         // Wait for initial timeout load
         console.log('Waiting for initial timeout');
         waitsFor(function () {
@@ -959,35 +957,6 @@ describe('Adal', function () {
         window.crypto = null;
     });
 
-    it('navigates to LOGIN_REQUEST url after handling callback', function () {
-        adal.popUp = false;
-        var loginRequestUrl = 'https://localhost:3000/login';
-        var createFakeLocation = function () {
-            return {
-                hash: '#id_token=idtoken234',
-                href: 'href',
-                replace: function (val) {
-                }
-            };
-        };
-
-        storageFake.setItem(adal.CONSTANTS.STORAGE.LOGIN_REQUEST, loginRequestUrl);
-
-        window.location = createFakeLocation();
-        adal.handleWindowCallback();
-        expect(window.location).toBe(loginRequestUrl);
-
-        window.location = createFakeLocation();
-        adal.config.navigateToLoginRequestUrl = true;
-        adal.handleWindowCallback();
-        expect(window.location).toBe(loginRequestUrl);
-
-        window.location = createFakeLocation();
-        adal.config.navigateToLoginRequestUrl = false;
-        adal.handleWindowCallback();
-        expect(window.location).not.toBe(loginRequestUrl);
-
-    });
     // TODO angular intercepptor
     // TODO angular authenticationService
 });
